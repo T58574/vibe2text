@@ -125,7 +125,9 @@ def test_dictation_app_open_settings():
             "api_key": "new_key",
             "base_url": "new_url",
             "hotkey": "<alt>+4",
-            "sample_rate": 22050
+            "sample_rate": 22050,
+            "stt_model": "whisper-large-v3-turbo",
+            "stt_language": "ru"
         }
         
         mock_class = mock.MagicMock()
@@ -139,7 +141,11 @@ def test_dictation_app_open_settings():
             
             app.open_settings()
             
-            mock_save.assert_called_once_with("new_key", "new_url", "<alt>+4", 22050)
+            mock_save.assert_called_once_with(
+                "new_key", "new_url", "<alt>+4", 22050,
+                stt_model="whisper-large-v3-turbo",
+                stt_language="ru"
+            )
             mock_stop.assert_called_once()
             mock_hotkeys.assert_called_once_with({"<alt>+4": app.trigger_toggle})
 
@@ -157,7 +163,9 @@ def test_dictation_app_open_settings_same_hotkey():
             "api_key": "new_key",
             "base_url": "new_url",
             "hotkey": "<alt>+3",
-            "sample_rate": 22050
+            "sample_rate": 22050,
+            "stt_model": "whisper-large-v3-turbo",
+            "stt_language": "ru"
         }
         
         mock_class = mock.MagicMock()
@@ -171,6 +179,24 @@ def test_dictation_app_open_settings_same_hotkey():
             
             app.open_settings()
             
-            mock_save.assert_called_once_with("new_key", "new_url", "<alt>+3", 22050)
+            mock_save.assert_called_once_with(
+                "new_key", "new_url", "<alt>+3", 22050,
+                stt_model="whisper-large-v3-turbo",
+                stt_language="ru"
+            )
             mock_stop.assert_not_called()
             mock_hotkeys.assert_not_called()
+
+def test_dictation_app_toggle_flow_transcribing():
+    with mock.patch("main.AudioRecorder"), \
+         mock.patch("main.STTService"), \
+         mock.patch("main.TextInjector"), \
+         mock.patch("main.OverlayWidget") as mock_overlay_class:
+        
+        mock_ui = mock.MagicMock()
+        mock_ui.state = "transcribing"
+        mock_overlay_class.return_value = mock_ui
+        
+        app = main.DictationApp()
+        app.handle_toggle()
+        app.recorder.start.assert_not_called()

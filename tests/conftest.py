@@ -39,6 +39,14 @@ class MockQWidget:
         pass
     def setStyleSheet(self, style):
         pass
+    def update(self):
+        pass
+    def rect(self):
+        m = mock.MagicMock()
+        m.width.return_value = 100
+        m.height.return_value = 50
+        m.adjusted.return_value = m
+        return m
 
 class MockQApplication:
     def __init__(self, argv):
@@ -57,9 +65,12 @@ class MockSignal:
         self.slots = []
     def connect(self, slot):
         self.slots.append(slot)
-    def emit(self):
+    def emit(self, *args, **kwargs):
         for slot in self.slots:
-            slot()
+            try:
+                slot(*args, **kwargs)
+            except TypeError:
+                slot()
 
 def mock_pyqt_signal(*args, **kwargs):
     return MockSignal()
@@ -75,6 +86,30 @@ class MockQt:
         NoPen = 0
     class GlobalColor:
         transparent = 0
+    class AlignmentFlag:
+        AlignCenter = 132
+
+class MockQThread(MockQObject):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+    def start(self):
+        self.run()
+    def run(self):
+        pass
+    def deleteLater(self, *args, **kwargs):
+        pass
+
+class MockQTimer(MockQObject):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.timeout = MockSignal()
+    def start(self, msec=None):
+        self.timeout.emit()
+    def stop(self):
+        pass
+    @staticmethod
+    def singleShot(msec, slot):
+        slot()
 
 class MockDialog(MockQWidget):
     class DialogCode:
@@ -89,7 +124,9 @@ class MockDialog(MockQWidget):
             "api_key": "test_key",
             "base_url": "test_url",
             "hotkey": "<alt>+3",
-            "sample_rate": 16000
+            "sample_rate": 16000,
+            "stt_model": "whisper-large-v3-turbo",
+            "stt_language": "ru"
         }
     def accept(self):
         pass
@@ -126,6 +163,8 @@ core_attrs = {
     "QObject": MockQObject,
     "pyqtSignal": mock_pyqt_signal,
     "Qt": MockQt,
+    "QThread": MockQThread,
+    "QTimer": MockQTimer,
 }
 
 mock_pos = mock.MagicMock()
